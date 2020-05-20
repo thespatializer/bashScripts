@@ -15,12 +15,6 @@ function try_command {
     return $status
 }
 
-# This script must be run with sudo
-if [[ $EUID -ne 0 ]]; then
-    echo -e $ECHO_PREFIX_ERROR "This script must be run with sudo!" 1>&2
-    exit 1
-fi
-
 # Detect system arch.
 ULONG_MASK=`getconf ULONG_MAX`
 if [ $ULONG_MASK == 18446744073709551615 ]; then
@@ -32,24 +26,28 @@ fi
 
 
 if [ `cat /etc/os-release | grep -E "CentOS" | wc -l` -ne 0 ]; then
-    try_command yum -y install redhat-lsb-core
-elif [ `cat /etc/os-release | grep -E "ID_LIKE=debian" | wc -l` -ne 0 ]; then
-    try_command apt-get update
-    try_command apt-get install -y lsb-release
+    try_command sudo yum -y install redhat-lsb-core
+elif [ `cat /etc/os-release | grep -E "ID_LIKE=debian" | wc -l` -ne 0 ] \
+        || [ `cat /etc/os-release | grep -E "ID=debian" | wc -l` -ne 0 ]; then
+    try_command sudo apt-get update
+    try_command sudo apt-get install -y lsb-release
 elif [ `cat /etc/os-release | grep -E "ID_LIKE=arch" | wc -l` -ne 0 ]; then
-    try_command pacman -S --noconfirm lsb-release
+    try_command sudo pacman -S --noconfirm lsb-release
+else
+    echo -e $ECHO_PREFIX_ERROR "This OS is not supported.\n"
+    exit 1
 fi
 
 try_command lsb_release -si > /dev/null
 
 LINUX_DISTRO=`lsb_release -si`
 
-if [ "$LINUX_DISTRO" == "Ubuntu" ]; then
-    try_command apt-get install -y zsh wget curl git
+if [ "$LINUX_DISTRO" == "Ubuntu" ] || [ "$LINUX_DISTRO" == "Debian" ]; then
+    try_command sudo apt-get install -y zsh wget curl git
 elif [ "$LINUX_DISTRO" == "CentOS" ]; then
-    try_command yum install -y zsh wget curl git
+    try_command sudo yum install -y zsh wget curl git
 elif [ "$LINUX_DISTRO" == "ManjaroLinux" ]; then
-    try_command pacman -S --noconfirm zsh wget curl git
+    try_command sudo pacman -S --noconfirm zsh wget curl git
 else
     echo -e $ECHO_PREFIX_INFO "The installation will be cancelled."
     echo -e $ECHO_PREFIX_INFO "The CDN-Transcode-Sample does not support this OS, please use Ubuntu, CentOS or Manjaro.\n"
